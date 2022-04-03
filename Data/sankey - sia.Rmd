@@ -1,0 +1,84 @@
+---
+title: "sankey-wealth-mob-vis"
+author: "Abhraneel Sarma"
+date: "1/8/2019"
+output: html_document
+---
+```{r}
+library(dplyr)
+library(magrittr)
+library(tidyr)
+library(purrr)
+library(jsonlite)
+```
+
+
+```{r}
+df.ws <- read.csv("C:\\Users\\Sia Ziyi\\Documents\\Project\\FUBOOTSTRAP\\Data\\2-wealth-structure-other.csv", header=TRUE)
+
+df.ws %<>%
+  mutate(
+    o = as.character(o),
+    o = replace(o, o == "Lowest Quintile", "Quintile 1"),
+    o = replace(o, o == "Highest Quintile", "Quintile 5"),
+    d = as.character(d),
+    d = replace(d, d == "Lowest Quintile", "Quintile 1"),
+    d = replace(d, d == "Highest Quintile", "Quintile 5")
+  )
+
+head(df.ws)
+```
+
+
+```{r}
+nodes.ws <- df.ws %>%
+  select(o, d, white) %>%
+  rename(
+    Parent = o,
+    Child = d,
+    race = white
+  ) %>%
+  gather(type, name, -race) %>%
+  unique() %>%
+  arrange(desc(type), name, race) %>%
+  mutate(
+    race = ifelse(race == "No", "Black", "White"),
+    name = paste(name, sep = " "),
+    node = seq.int(nrow(.))-1
+  ) %>%
+  select(node, name, race, type)  %>%
+  mutate(
+    name = replace(name, name == "Quintile 1", "Bot. 20%"),
+    name = replace(name, name == "Quintile 2", "Bot. 60% - 80%"),
+    name = replace(name, name == "Quintile 3", "Middle 20%"),
+    name = replace(name, name == "Quintile 4", "Top 20% - 40%"),
+    name = replace(name, name == "Quintile 5", "Top 20%")
+  )
+```
+
+
+```{r}
+links.ws <- df.ws %>%
+  select(o, d, white, n) %>%
+  rename(
+    source = o,
+    target = d,
+    race = white,
+    value = n
+  ) %>%
+  arrange(source, target, race) %>%
+  mutate(
+    race = ifelse(race == "No", "Black", "White"),
+    source = rep(rep(0:1, 5), 5) + rep(seq(0, 9, by = 2), each = 10),
+    target = rep(seq(10, 19), 5),
+  ) %>%
+  select(source, target, value, race)
+```
+
+
+```{r}
+ws <- list(nodes = nodes.ws, links = links.ws)
+
+write_json(ws, "C:\\Users\\Sia Ziyi\\Documents\\Project\\FUBOOTSTRAP\\Data\\2-wealth-structure-other.json", pretty = TRUE)
+```
+
